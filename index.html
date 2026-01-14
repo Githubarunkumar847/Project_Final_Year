@@ -125,6 +125,10 @@ th {
     <div class="sidebar">
         <h3>Quick Analysis</h3>
 
+        <button onclick="setQuery(showAll)">
+            Show Full Dataset
+        </button>
+
         <button onclick="setQuery(bestSolvent)">
             Best Solvent (Overall)
         </button>
@@ -157,7 +161,12 @@ th {
 <script>
 let db;
 
-// Predefined queries
+/* ---------- Predefined Queries ---------- */
+
+const showAll = `
+SELECT * FROM performance;
+`;
+
 const bestSolvent = `
 SELECT solvent,
 AVG(flux_lmh) AS avg_flux,
@@ -192,14 +201,37 @@ GROUP BY solvent
 ORDER BY overall_score DESC;
 `;
 
+/* ---------- Utility ---------- */
+
 function setQuery(q) {
     document.getElementById("query").value = q;
 }
 
+/* ---------- Load CSV ---------- */
+
+async function loadCSV() {
+    const response = await fetch("performance.csv");
+    const text = await response.text();
+
+    const rows = text.trim().split("\n");
+    rows.shift(); // remove header
+
+    rows.forEach(row => {
+        const values = row.split(",");
+        db.run(
+            `INSERT INTO performance VALUES (?, ?, ?, ?, ?, ?)`,
+            values
+        );
+    });
+}
+
+/* ---------- Initialize SQL ---------- */
+
 initSqlJs({
   locateFile: file =>
     `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
-}).then(SQL => {
+}).then(async SQL => {
+
     db = new SQL.Database();
 
     db.run(`
@@ -211,46 +243,44 @@ initSqlJs({
             flux_lmh REAL,
             efficiency_pct REAL
         );
-
-        INSERT INTO performance VALUES
-        ('DMF','Immiscible','Diesel',2.9,2300,99),
-        ('DMF/DMSO 7:3','Immiscible','Diesel',2.9,2600,99),
-        ('DMF/DMSO 5:5','Immiscible','Diesel',2.9,3000,99),
-        ('DMSO','Immiscible','Diesel',2.9,2800,99),
-
-        ('DMF','Emulsion','Diesel',2.9,2000,98),
-        ('DMF/DMSO 7:3','Emulsion','Diesel',2.9,2250,98),
-        ('DMF/DMSO 5:5','Emulsion','Diesel',2.9,2600,98),
-        ('DMSO','Emulsion','Diesel',2.9,2400,98);
     `);
 
-    setQuery(bestSolvent);
+    await loadCSV();
+    setQuery(showAll);
 });
 
+/* ---------- Run Query ---------- */
+
 function runQuery() {
-    const query = document.getElementById("query").value;
-    const result = db.exec(query);
+    try {
+        const query = document.getElementById("query").value;
+        const result = db.exec(query);
 
-    if (!result.length) {
-        document.getElementById("output").innerHTML = "No results";
-        return;
-    }
+        if (!result.length) {
+            document.getElementById("output").innerHTML =
+                "<b>No results returned.</b>";
+            return;
+        }
 
-    let html = "<table><tr>";
-    result[0].columns.forEach(col => html += `<th>${col}</th>`);
-    html += "</tr>";
-
-    result[0].values.forEach(row => {
-        html += "<tr>";
-        row.forEach(val => html += `<td>${val}</td>`);
+        let html = "<table><tr>";
+        result[0].columns.forEach(col => html += `<th>${col}</th>`);
         html += "</tr>";
-    });
 
-    html += "</table>";
-    document.getElementById("output").innerHTML = html;
+        result[0].values.forEach(row => {
+            html += "<tr>";
+            row.forEach(val => html += `<td>${val}</td>`);
+            html += "</tr>";
+        });
+
+        html += "</table>";
+        document.getElementById("output").innerHTML = html;
+
+    } catch (err) {
+        document.getElementById("output").innerHTML =
+            `<span style="color:red;">SQL Error: ${err.message}</span>`;
+    }
 }
 </script>
 
 </body>
 </html>
-

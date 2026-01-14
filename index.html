@@ -4,7 +4,11 @@
 <meta charset="UTF-8">
 <title>Membrane Performance Analysis</title>
 
+<!-- SQL.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
@@ -69,7 +73,6 @@ textarea {
     padding: 12px;
     border-radius: 8px;
     border: 1px solid #ccc;
-    resize: vertical;
 }
 
 .run-btn {
@@ -80,17 +83,11 @@ textarea {
     color: white;
     border: none;
     border-radius: 6px;
-    font-size: 14px;
     cursor: pointer;
-}
-
-.run-btn:hover {
-    background: #094bb5;
 }
 
 .result {
     margin-top: 20px;
-    overflow-x: auto;
 }
 
 table {
@@ -103,12 +100,17 @@ th, td {
     padding: 10px;
     border-bottom: 1px solid #ddd;
     text-align: center;
-    font-size: 14px;
 }
 
 th {
     background: #f1f3f5;
-    font-weight: 600;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 30px;
 }
 </style>
 </head>
@@ -116,124 +118,84 @@ th {
 <body>
 
 <header>
-    Electrospun PAN/MXene/TiO₂ Membrane – SQL Performance Analysis
+Electrospun PAN/MXene/TiO₂ Membrane – SQL & Visual Analysis
 </header>
 
 <div class="container">
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h3>Quick Analysis</h3>
+<div class="sidebar">
+    <h3>Quick Analysis</h3>
+    <button onclick="setQuery(showAll)">Show Full Dataset</button>
+    <button onclick="setQuery(bestSolvent)">Best Solvent</button>
+    <button onclick="setQuery(viscosityEffect)">Flux vs Viscosity</button>
+    <button onclick="setQuery(systemComparison)">Immiscible vs Emulsion</button>
+    <button onclick="setQuery(solventRanking)">Solvent Ranking</button>
+</div>
 
-        <button onclick="setQuery(showAll)">
-            Show Full Dataset
-        </button>
+<div class="main">
 
-        <button onclick="setQuery(bestSolvent)">
-            Best Solvent (Overall)
-        </button>
+<textarea id="query"></textarea>
+<button class="run-btn" onclick="runQuery()">Run Query</button>
 
-        <button onclick="setQuery(viscosityEffect)">
-            Flux vs Viscosity
-        </button>
+<div class="result" id="output"></div>
 
-        <button onclick="setQuery(systemComparison)">
-            Immiscible vs Emulsion
-        </button>
+<div class="charts">
+    <canvas id="chart1"></canvas>
+    <canvas id="chart2"></canvas>
+</div>
 
-        <button onclick="setQuery(solventRanking)">
-            Solvent Ranking Score
-        </button>
-    </div>
-
-    <!-- Main -->
-    <div class="main">
-
-        <textarea id="query"></textarea>
-
-        <button class="run-btn" onclick="runQuery()">Run Query</button>
-
-        <div class="result" id="output"></div>
-
-    </div>
+</div>
 </div>
 
 <script>
-let db;
+let db, chart1, chart2;
 
-/* ---------- Predefined Queries ---------- */
+/* ---------- Queries ---------- */
 
-const showAll = `
-SELECT * FROM performance;
-`;
+const showAll = `SELECT * FROM performance;`;
 
 const bestSolvent = `
-SELECT solvent,
-AVG(flux_lmh) AS avg_flux,
-AVG(efficiency_pct) AS avg_efficiency
-FROM performance
-GROUP BY solvent
-ORDER BY avg_flux DESC;
+SELECT solvent, AVG(flux_lmh) avg_flux, AVG(efficiency_pct) avg_eff
+FROM performance GROUP BY solvent;
 `;
 
 const viscosityEffect = `
-SELECT oil_type,
-viscosity_cp,
-AVG(flux_lmh) AS avg_flux
-FROM performance
-GROUP BY oil_type, viscosity_cp
-ORDER BY viscosity_cp;
+SELECT viscosity_cp, AVG(flux_lmh) avg_flux
+FROM performance GROUP BY viscosity_cp ORDER BY viscosity_cp;
 `;
 
 const systemComparison = `
-SELECT system_type,
-AVG(flux_lmh) AS avg_flux,
-AVG(efficiency_pct) AS avg_efficiency
-FROM performance
-GROUP BY system_type;
+SELECT system_type, AVG(flux_lmh) avg_flux
+FROM performance GROUP BY system_type;
 `;
 
 const solventRanking = `
 SELECT solvent,
-AVG((flux_lmh/3000.0 + efficiency_pct/99.0)/2) AS overall_score
-FROM performance
-GROUP BY solvent
-ORDER BY overall_score DESC;
+AVG((flux_lmh/3000.0 + efficiency_pct/99.0)/2) score
+FROM performance GROUP BY solvent ORDER BY score DESC;
 `;
 
-/* ---------- Utility ---------- */
+function setQuery(q){ document.getElementById("query").value = q; }
 
-function setQuery(q) {
-    document.getElementById("query").value = q;
-}
+/* ---------- CSV Loader ---------- */
 
-/* ---------- Load CSV ---------- */
+async function loadCSV(){
+    const res = await fetch("performance.csv");
+    const text = await res.text();
+    const rows = text.trim().split("\n").slice(1);
 
-async function loadCSV() {
-    const response = await fetch("performance.csv");
-    const text = await response.text();
-
-    const rows = text.trim().split("\n");
-    rows.shift(); // remove header
-
-    rows.forEach(row => {
-        const values = row.split(",");
-        db.run(
-            `INSERT INTO performance VALUES (?, ?, ?, ?, ?, ?)`,
-            values
-        );
+    rows.forEach(r=>{
+        const v = r.split(",");
+        db.run(`INSERT INTO performance VALUES (?,?,?,?,?,?)`, v);
     });
 }
 
-/* ---------- Initialize SQL ---------- */
+/* ---------- SQL Init ---------- */
 
 initSqlJs({
-  locateFile: file =>
-    `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
-}).then(async SQL => {
-
+ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${f}`
+}).then(async SQL=>{
     db = new SQL.Database();
-
     db.run(`
         CREATE TABLE performance (
             solvent TEXT,
@@ -244,41 +206,52 @@ initSqlJs({
             efficiency_pct REAL
         );
     `);
-
     await loadCSV();
     setQuery(showAll);
 });
 
-/* ---------- Run Query ---------- */
+/* ---------- Run Query + Charts ---------- */
 
-function runQuery() {
-    try {
-        const query = document.getElementById("query").value;
-        const result = db.exec(query);
+function runQuery(){
+    const q = document.getElementById("query").value;
+    const r = db.exec(q);
+    if(!r.length){ output.innerHTML="No results"; return; }
 
-        if (!result.length) {
-            document.getElementById("output").innerHTML =
-                "<b>No results returned.</b>";
-            return;
-        }
+    const cols = r[0].columns;
+    const vals = r[0].values;
 
-        let html = "<table><tr>";
-        result[0].columns.forEach(col => html += `<th>${col}</th>`);
-        html += "</tr>";
+    let html="<table><tr>";
+    cols.forEach(c=>html+=`<th>${c}</th>`);
+    html+="</tr>";
+    vals.forEach(row=>{
+        html+="<tr>";
+        row.forEach(v=>html+=`<td>${v}</td>`);
+        html+="</tr>";
+    });
+    html+="</table>";
+    output.innerHTML=html;
 
-        result[0].values.forEach(row => {
-            html += "<tr>";
-            row.forEach(val => html += `<td>${val}</td>`);
-            html += "</tr>";
-        });
+    drawCharts(cols, vals);
+}
 
-        html += "</table>";
-        document.getElementById("output").innerHTML = html;
+/* ---------- Charts ---------- */
 
-    } catch (err) {
-        document.getElementById("output").innerHTML =
-            `<span style="color:red;">SQL Error: ${err.message}</span>`;
-    }
+function drawCharts(cols, data){
+    if(chart1) chart1.destroy();
+    if(chart2) chart2.destroy();
+
+    const labels = data.map(r=>r[0]);
+    const values = data.map(r=>r[1]);
+
+    chart1 = new Chart(document.getElementById("chart1"),{
+        type:"bar",
+        data:{ labels, datasets:[{ label: cols[1], data: values }] }
+    });
+
+    chart2 = new Chart(document.getElementById("chart2"),{
+        type:"line",
+        data:{ labels, datasets:[{ label: cols[1], data: values }] }
+    });
 }
 </script>
 

@@ -1,0 +1,33 @@
+solvent,system_type,oil_type,viscosity_cp,flux_lmh,efficiency_pct
+DMF,Immiscible,Diesel,2.9,2102,92
+DMF,Immiscible,Sunflower,51,1913,90
+DMF,Immiscible,Soybean,62,1861,90
+DMF,Immiscible,Peanut,69,1771,88
+DMF,Emulsion / Miscible,Diesel,2.9,1639,90
+DMF,Emulsion / Miscible,Sunflower,51,1520,88
+DMF,Emulsion / Miscible,Soybean,62,1440,87
+DMF,Emulsion / Miscible,Peanut,69,1365,86
+DMSO,Immiscible,Diesel,2.9,2321,98
+DMSO,Immiscible,Sunflower,51,2148,96
+DMSO,Immiscible,Soybean,62,2057,96
+DMSO,Immiscible,Peanut,69,1991,95
+DMSO,Emulsion / Miscible,Diesel,2.9,1813,95
+DMSO,Emulsion / Miscible,Sunflower,51,1675,93
+DMSO,Emulsion / Miscible,Soybean,62,1607,92
+DMSO,Emulsion / Miscible,Peanut,69,1504,91
+DMF/DMSO 7:3,Immiscible,Diesel,2.9,2437,96
+DMF/DMSO 7:3,Immiscible,Sunflower,51,2222,94
+DMF/DMSO 7:3,Immiscible,Soybean,62,2143,94
+DMF/DMSO 7:3,Immiscible,Peanut,69,2083,93
+DMF/DMSO 7:3,Emulsion / Miscible,Diesel,2.9,1915,93
+DMF/DMSO 7:3,Emulsion / Miscible,Sunflower,51,1792,91
+DMF/DMSO 7:3,Emulsion / Miscible,Soybean,62,1747,90
+DMF/DMSO 7:3,Emulsion / Miscible,Peanut,69,1601,89
+DMF/DMSO 5:5,Immiscible,Diesel,2.9,2535,99
+DMF/DMSO 5:5,Immiscible,Sunflower,51,2336,98
+DMF/DMSO 5:5,Immiscible,Soybean,62,2269,98
+DMF/DMSO 5:5,Immiscible,Peanut,69,2167,97
+DMF/DMSO 5:5,Emulsion / Miscible,Diesel,2.9,2042,98
+DMF/DMSO 5:5,Emulsion / Miscible,Sunflower,51,1879,97
+DMF/DMSO 5:5,Emulsion / Miscible,Soybean,62,1829,96.5
+DMF/DMSO 5:5,Emulsion / Miscible,Peanut,69,1728,96

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Membrane Performance Analysis</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+</head>
+<body>
+
+<h2>SQL-Based Membrane Performance Analysis</h2>
+
+<textarea id="query" rows="6" cols="80">
+SELECT solvent, AVG(flux_lmh) AS avg_flux
+FROM performance
+GROUP BY solvent;
+</textarea>
+
+<br><br>
+<button onclick="runQuery()">Run Query</button>
+
+<div id="output"></div>
+
+<script>
+let db;
+
+initSqlJs().then(SQL => {
+  db = new SQL.Database();
+
+  db.run(`
+    CREATE TABLE performance (
+      solvent TEXT,
+      system_type TEXT,
+      oil_type TEXT,
+      viscosity_cp REAL,
+      flux_lmh REAL,
+      efficiency_pct REAL
+    );
+
+    INSERT INTO performance VALUES
+    ('DMF/DMSO 5:5','Immiscible','Diesel',2.9,2500,99),
+    ('DMF/DMSO 5:5','Emulsion','Diesel',2.9,2000,98),
+    ('DMF','Immiscible','Peanut',69,1750,88);
+  `);
+});
+
+function runQuery() {
+  const query = document.getElementById("query").value;
+  const result = db.exec(query);
+
+  let html = "<table border='1'><tr>";
+  result[0].columns.forEach(col => html += `<th>${col}</th>`);
+  html += "</tr>";
+
+  result[0].values.forEach(row => {
+    html += "<tr>";
+    row.forEach(val => html += `<td>${val}</td>`);
+    html += "</tr>";
+  });
+
+  html += "</table>";
+  document.getElementById("output").innerHTML = html;
+}
+</script>
+
+</body>
+</html>

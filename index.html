@@ -196,7 +196,10 @@ function setQuery(q) {
     document.getElementById("query").value = q;
 }
 
-initSqlJs().then(SQL => {
+initSqlJs({
+  locateFile: file =>
+    `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+}).then(SQL => {
     db = new SQL.Database();
 
     db.run(`
@@ -250,3 +253,4 @@ function runQuery() {
 
 </body>
 </html>
+
